@@ -22,7 +22,6 @@ public class KuhnTrainer {
 		System.out.println("Average game value: " + util / iterations);
 		for (Node n : nodeMap.values())
 			System.out.println(n);
-
 	}
 
 	public int[] shuffleCards(int[] cards) {
@@ -36,66 +35,37 @@ public class KuhnTrainer {
 	}
 
 	private double cfr(int[] cards, String history, double p0, double p1) {
-		int plays = history.length(); 
-		int player = plays % 2; 
+		int plays = history.length();
+		int player = plays % 2;
 		int opponent = 1 - player;
 		
 		if (plays > 1) {
 			boolean terminalPass = history.charAt(plays - 1) == 'p';
 			boolean doubleBet = history.substring(plays - 2, plays).equals("bb");
 			boolean isPlayerCardHigher = cards[player] > cards[opponent];
-			if (terminalPass) {
-				if (history.equals("pp")) {
+			
+			//Return payoff for terminal states
+			if (terminalPass)
+				if (history.equals("pp"))
 					return isPlayerCardHigher ? 1 : -1;
-				} else
+				else
 					return 1;
-			} else if (doubleBet){
-				return isPlayerCardHigher ? 1 : -1;
-			}
+			else if (doubleBet)
+				return isPlayerCardHigher ? 2 : -2;
 		}
+
 		String infoSet = cards[player] + history;
-		Node node = getInformationSetNode(infoSet);
-		return recursiveCFR( player, node, history, cards, p0, p1);
-		}
-
-	// In discerning a terminal state, we first check to see of both players
-	// have had at least one action.
-	// Given that, we check for the two conditions for a terminal state: a
-	// terminal pass after the first action, or a double bet. If there’s a
-	// terminal pass, then a double terminal pass awards a chip to the player
-	// with the higher card. Otherwise, it’s a single pass after a bet and the
-	// player betting wins a chip. If it’s not a terminal pass, but a two
-	// consecutive bets have occurred, the player with the higher card gets two
-	// chips. Otherwise, the state isn’t terminal and computation continues:
-
-//	private int returnPayOffForTerminalStates(int plays, String history, int[] cards, int player, int opponent) {
-//		if (plays > 1) {
-//			boolean terminalPass = history.charAt(plays - 1) == 'p';
-//			boolean doubleBet = history.substring(plays - 2, plays).equals("bb");
-//			boolean isPlayerCardHigher = cards[player] > cards[opponent];
-//			if (terminalPass) {
-//				if (history.equals("pp")) {
-//					return isPlayerCardHigher ? 1 : -1;
-//				} else
-//					return 1;
-//			} else if (doubleBet){
-//				return isPlayerCardHigher ? 2 : -2;
-//			}
-//		}
-//
-//	}
-
-	private Node getInformationSetNode(String infoSet) {
+		
+		//Get Node
+		
 		Node node = nodeMap.get(infoSet);
 		if (node == null) {
 			node = new Node();
 			node.infoSet = infoSet;
 			nodeMap.put(infoSet, node);
 		}
-		return node;
-	}
-
-	private double recursiveCFR(int player, Node node, String history, int[] cards, double p0, double p1) {
+		//		recursively call cfr
+		
 		double[] strategy = node.getStrategy(player == 0 ? p0 : p1);
 		double[] util = new double[NUM_ACTIONS];
 		double nodeUtil = 0;
@@ -104,11 +74,20 @@ public class KuhnTrainer {
 			util[a] = player == 0 ? -cfr(cards, nextHistory, p0 * strategy[a], p1)
 					: -cfr(cards, nextHistory, p0, p1 * strategy[a]);
 			nodeUtil += strategy[a] * util[a];
+		}
+
+//		compute cfr
+		
+		for (int a = 0; a < NUM_ACTIONS; a++) {
 			double regret = util[a] - nodeUtil;
 			node.regretSum[a] += (player == 0 ? p1 : p0) * regret;
 		}
+
 		return nodeUtil;
 	}
+
+	
+	
 
 	public class Node {
 		String infoSet;
